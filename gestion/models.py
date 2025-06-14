@@ -99,8 +99,6 @@ class Fichier(models.Model):
     def __str__(self):
         return f"{self.get_type_fichier_display()} - {self.experimentation}"
     
-    
-
 
 class ContactReferent(models.Model):
     """
@@ -161,3 +159,30 @@ class ChampPersonnalise(models.Model):
 
     def __str__(self):
         return f"{self.nom_champ} ({self.type_champ})"
+    
+
+class UsagerPro(models.Model):
+    nom = models.CharField(max_length=100, verbose_name="Nom")
+    prenom = models.CharField(max_length=100, verbose_name="Prénom")
+    telephone = models.CharField(max_length=10, verbose_name="Téléphone")
+    email = models.EmailField(max_length=254, blank=True, verbose_name="Email professionnel")
+    profession = models.CharField(
+        max_length=50,
+        choices=[
+            ('Infirmier', 'Infirmier'),
+            ('Médecin', 'Médecin'),
+            ('Ergothérapeute', 'Ergothérapeute'),
+            ('Autre', 'Autre'),
+        ],
+        verbose_name="Profession"
+    )
+    structure = models.CharField(max_length=200, verbose_name="Structure / Établissement")
+    remarques = models.TextField(blank=True, verbose_name="Remarques")
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
+
+    class Meta:
+        verbose_name = "Usager professionnel"
+        verbose_name_plural = "Usagers professionnels"
+
+    def __str__(self):
+        return f"{self.prenom} {self.nom} - {self.profession}"

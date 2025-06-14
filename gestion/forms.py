@@ -1,7 +1,7 @@
 from django import forms
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from .models import Beneficiaire, Aidant, Experimentation, Fichier, ExperimentationGenerale, ContactReferent, Cohorte, ChampPersonnalise
+from .models import Beneficiaire, Aidant, Experimentation, Fichier, ExperimentationGenerale, ContactReferent, Cohorte, ChampPersonnalise, UsagerPro
 
 
 class BeneficiaireForm(forms.ModelForm):
@@ -281,3 +281,61 @@ ChampPersonnaliseFormSet = forms.inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+class UsagerProForm(forms.ModelForm):
+    class Meta:
+        model = UsagerPro
+        fields = ['nom', 'prenom', 'telephone', 'email', 'profession', 'structure', 'remarques']
+        widgets = {
+            'nom': forms.TextInput(attrs={'class': 'w-full border rounded p-2'}),
+            'prenom': forms.TextInput(attrs={'class': 'w-full border rounded p-2'}),
+            'telephone': forms.TextInput(attrs={'class': 'w-full border rounded p-2'}),
+            'email': forms.EmailInput(attrs={'class': 'w-full border rounded p-2'}),
+            'profession': forms.Select(attrs={'class': 'w-full border rounded p-2'}),
+            'structure': forms.TextInput(attrs={'class': 'w-full border rounded p-2'}),
+            'remarques': forms.Textarea(attrs={'class': 'w-full border rounded p-2', 'rows': 3}),
+        }
+
+    def clean_nom(self):
+        nom = self.cleaned_data['nom'].strip()
+        if not nom:
+            raise forms.ValidationError("Le nom est requis.")
+        if not all(c.isalpha() or c in " -'" for c in nom):
+            raise forms.ValidationError("Le nom doit contenir uniquement des lettres, espaces, tirets ou apostrophes.")
+        if len(nom) < 2:
+            raise forms.ValidationError("Le nom doit contenir au moins 2 caractères.")
+        return nom
+
+    def clean_prenom(self):
+        prenom = self.cleaned_data['prenom'].strip()
+        if not prenom:
+            raise forms.ValidationError("Le prénom est requis.")
+        if not all(c.isalpha() or c in " -'" for c in prenom):
+            raise forms.ValidationError("Le prénom doit contenir uniquement des lettres, espaces, tirets ou apostrophes.")
+        if len(prenom) < 2:
+            raise forms.ValidationError("Le prénom doit contenir au moins 2 caractères.")
+        return prenom
+
+    def clean_telephone(self):
+        telephone = self.cleaned_data['telephone'].strip()
+        if not telephone.isdigit() or len(telephone) != 10:
+            raise forms.ValidationError("Le numéro de téléphone doit contenir exactement 10 chiffres.")
+        return telephone
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip()
+        if email and not forms.EmailField().clean(email):
+            raise forms.ValidationError("L'adresse email semble incorrecte.")
+        return email
+
+    def clean_structure(self):
+        structure = self.cleaned_data['structure'].strip()
+        if len(structure) < 2:
+            raise forms.ValidationError("La structure doit contenir au moins 2 caractères.")
+        return structure
+
+    def clean_profession(self):
+        profession = self.cleaned_data['profession']
+        if not profession:
+            raise forms.ValidationError("Veuillez sélectionner une profession.")
+        return profession

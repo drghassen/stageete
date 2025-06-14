@@ -11,4 +11,6 @@ urlpatterns = [
     # Nouveaux chemins
     path('experimentation_form/', views.experimentation_form_view, name='experimentation_form'),
     path('create-experimentation/', views.create_experimentation, name='create_experimentation'),
+    path('usager_pro_form/', views.usePro_Form_View, name='usePro_Form'),
+    path("add-usager-pro/", views.add_usager_pro, name="add_usager_pro"),
 ]

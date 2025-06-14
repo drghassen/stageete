@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.urls import reverse
 from urllib.parse import quote
-from .models import Beneficiaire, Aidant, ChampPersonnalise, ContactReferent, Experimentation, ExperimentationGenerale, Fichier, Cohorte
-from .forms import ContactReferentForm, ExperimentationGeneraleForm, CohorteForm, ChampPersonnaliseForm
+from .models import Beneficiaire, Aidant, ChampPersonnalise, ContactReferent, Experimentation, ExperimentationGenerale, Fichier, Cohorte, UsagerPro
+from .forms import ContactReferentForm, ExperimentationGeneraleForm, CohorteForm, ChampPersonnaliseForm, UsagerProForm
 
 from django.forms import inlineformset_factory
 from django.views.decorators.csrf import csrf_exempt
@@ -16,8 +16,10 @@ def form_view(request):
     return render(request, 'Formulaire_Coordinatrice.html')
 
 def experimentation_form_view(request):
-    """Affiche le formulaire d'ajout d'expérimentation"""
     return render(request, 'Formulaire_Expérimentation.html')
+
+def usePro_Form_View(request):
+    return render(request, 'Formulaire_Usager_Pro.html')
 
 def confirmation_view(request):
     message = request.GET.get('message', 'Opération réussie')
@@ -205,3 +207,31 @@ def create_experimentation(request):
         'cohorte_formset': cohorte_formset,
         'champ_formset': champ_formset,
     })
+
+@csrf_exempt
+@csrf_exempt
+def add_usager_pro(request):
+    if request.method == 'POST':
+        try:
+            # Exemple d'enregistrement
+            usager = UsagerPro.objects.create(
+                nom=request.POST.get('nom'),
+                prenom=request.POST.get('prenom'),
+                telephone=request.POST.get('telephone'),
+                email=request.POST.get('email'),
+                profession=request.POST.get('profession'),
+                structure=request.POST.get('structure'),
+                remarques=request.POST.get('remarques', '')
+            )
+            return JsonResponse({
+                "success": True,
+                "message": "Usager professionnel ajouté avec succès.",
+                "redirect_url": "/confirmation/"
+            })
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": "Erreur lors de l’enregistrement.",
+                "details": str(e)
+            }, status=400)
+    return JsonResponse({"error": "Méthode non autorisée"}, status=405)

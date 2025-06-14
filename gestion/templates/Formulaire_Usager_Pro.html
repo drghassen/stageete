@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajouter un Usager Pro</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="max-w-xl mx-auto mt-10 p-8 bg-white shadow-2xl rounded-xl">
+    <h1 class="text-2xl font-bold text-center mb-6">Ajouter un usager professionnel</h1>
+
+    <form id="formUsagerPro" method="POST" action="{% url 'gestion:add_usager_pro' %}" class="space-y-4">
+
+      {% csrf_token %}
+      <!-- Reste du formulaire inchangé -->
+      <div>
+        <label class="block font-semibold">Nom <span class="text-red-500">*</span></label>
+        <input type="text" name="nom" required class="w-full border rounded p-2">
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div>
+        <label class="block font-semibold">Prénom <span class="text-red-500">*</span></label>
+        <input type="text" name="prenom" required class="w-full border rounded p-2">
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div>
+        <label class="block font-semibold">Téléphone <span class="text-red-500">*</span></label>
+        <input type="tel" name="telephone" required class="w-full border rounded p-2">
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div>
+        <label class="block font-semibold">Email professionnel</label>
+        <input type="email" name="email" class="w-full border rounded p-2">
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div>
+        <label class="block font-semibold">Profession <span class="text-red-500">*</span></label>
+        <select name="profession" required class="w-full border rounded p-2">
+          <option value="">Choisir...</option>
+          <option>Infirmier</option>
+          <option>Médecin</option>
+          <option>Ergothérapeute</option>
+          <option>Autre</option>
+        </select>
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div>
+        <label class="block font-semibold">Structure / Établissement <span class="text-red-500">*</span></label>
+        <input type="text" name="structure" required class="w-full border rounded p-2">
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div>
+        <label class="block font-semibold">Remarques</label>
+        <textarea name="remarques" rows="3" class="w-full border rounded p-2"></textarea>
+        <div class="text-red-600 text-sm message-erreur mt-1"></div>
+      </div>
+      <div class="flex justify-end gap-4 pt-4">
+        <button type="reset" class="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400">Annuler</button>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Script JavaScript inchangé (voir ci-dessous pour confirmation)
+    const form = document.getElementById("formUsagerPro");
+
+    function setErreur(input, message) {
+      let msg = input.nextElementSibling;
+      if (!msg || !msg.classList.contains("message-erreur")) {
+        msg = document.createElement("div");
+        msg.className = "text-red-600 text-sm message-erreur mt-1";
+        input.parentNode.appendChild(msg);
+      }
+      msg.textContent = message;
+      input.classList.add("border-red-500");
+    }
+
+    function clearErreur(input) {
+      input.classList.remove("border-red-500");
+      const msg = input.nextElementSibling;
+      if (msg && msg.classList.contains("message-erreur")) {
+        msg.textContent = "";
+      }
+    }
+
+    function validerNomPrenom(input) {
+      console.log(`Validation du champ ${input.name}: "${input.value.trim() || '<vide>'}"`);
+      const valeur = input.value.trim();
+      if (!/^[A-Za-zÀ-ÿ \-']{2,}$/.test(valeur)) {
+        setErreur(input, "Veuillez saisir un prénom/nom valide (2 lettres minimum, sans chiffres).");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function validerTel(input) {
+      console.log(`Validation du champ ${input.name}: "${input.value.trim() || '<vide>'}"`);
+      const valeur = input.value.trim();
+      if (!/^\d{10}$/.test(valeur)) {
+        setErreur(input, "Le numéro doit contenir exactement 10 chiffres (ex: 0612345678).");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function validerEmail(input) {
+      console.log(`Validation du champ ${input.name}: "${input.value.trim() || '<vide>'}"`);
+      const valeur = input.value.trim();
+      if (valeur && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur)) {
+        setErreur(input, "L'adresse email semble incorrecte (ex: nom@exemple.com).");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function validerStructure(input) {
+      console.log(`Validation du champ ${input.name}: "${input.value.trim() || '<vide>'}"`);
+      const valeur = input.value.trim();
+      if (valeur.length < 2) {
+        setErreur(input, "Merci d’indiquer le nom de la structure ou de l’établissement.");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function validerProfession(select) {
+      console.log(`Validation du champ ${select.name}: "${select.value || '<vide>'}"`);
+      if (!select.value) {
+        setErreur(select, "Veuillez sélectionner une profession dans la liste.");
+      } else {
+        clearErreur(select);
+      }
+    }
+
+    // Attacher les contrôles "live"
+    form.nom.addEventListener("input", e => validerNomPrenom(e.target));
+    form.prenom.addEventListener("input", e => validerNomPrenom(e.target));
+    form.telephone.addEventListener("input", e => validerTel(e.target));
+    form.email.addEventListener("input", e => validerEmail(e.target));
+    form.structure.addEventListener("input", e => validerStructure(e.target));
+    form.profession.addEventListener("change", e => validerProfession(e.target));
+
+    // Validation à la soumission
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      console.log("=== DÉBUT SOUMISSION FORMULAIRE ===");
+
+      // Valider tous les champs
+      console.group("Validation des champs");
+      validerNomPrenom(form.nom);
+      validerNomPrenom(form.prenom);
+      validerTel(form.telephone);
+      validerEmail(form.email);
+      validerStructure(form.structure);
+      validerProfession(form.profession);
+      console.groupEnd();
+
+      // Vérifier les erreurs
+      console.group("Vérification des erreurs");
+      const erreursVisibles = Array.from(form.querySelectorAll(".message-erreur"))
+        .filter(el => el.textContent !== "")
+        .map(el => el.textContent);
+      console.log(`Total erreurs détectées: ${erreursVisibles.length}`);
+      if (erreursVisibles.length) {
+        console.error("Erreurs détectées:", erreursVisibles);
+      } else {
+        console.log("Aucune erreur détectée");
+      }
+      console.groupEnd();
+
+      if (erreursVisibles.length === 0) {
+        console.log("Envoi de la requête POST à", form.action);
+        try {
+          const formData = new FormData(form);
+          console.log("FormData contenu:", Array.from(formData.entries()));
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+          });
+          console.log("Réponse reçue, statut:", response.status);
+          const result = await response.json();
+          console.log("Résultat de la requête:", result);
+
+          if (response.ok && result.success) {
+            console.log("Succès, redirection vers:", result.redirect_url);
+            alert(result.message);
+            window.location.href = result.redirect_url;
+          } else {
+            console.error("Erreur dans la réponse:", result.error, result.errors || {});
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'form-error-message bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4';
+            errorDiv.textContent = result.error || "Une erreur s'est produite lors de l'envoi du formulaire.";
+            form.prepend(errorDiv);
+            window.scrollTo(0, 0);
+          }
+        } catch (error) {
+          console.error("Erreur réseau:", error);
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'form-error-message bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4';
+          errorDiv.textContent = "Une erreur s'est produite lors de l'envoi du formulaire.";
+          form.prepend(errorDiv);
+          window.scrollTo(0, 0);
+        }
+      } else {
+        console.error("Soumission annulée en raison d'erreurs de validation");
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'form-error-message bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4';
+        errorDiv.textContent = "Veuillez corriger les erreurs dans le formulaire.";
+        form.prepend(errorDiv);
+        window.scrollTo(0, 0);
+      }
+    });
+  </script>
+</body>
+</html>
