@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Confirmation</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800 p-10">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-green-700">Confirmation</h1>
+        <p id="message" class="text-center text-lg">{{ message }}</p>
+        <script>
+            alert('✅ {{ message|escapejs }}');
+            // Redirect back to menu after alert
+            window.location.href = "{% url 'gestion:menu_view' %}";
+        </script>
+    </div>
+</body>
+</html>

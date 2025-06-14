@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulaire Expérimentation</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+    .label-required::after {
+      content: " *";
+      color: red;
+    }
+
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 pt-6">
+  <div class="max-w-5xl mx-auto p-8 bg-white shadow-2xl rounded-2xl mt-10">
+    <h1 class="text-3xl font-bold mb-6 text-center">Ajout d'un bénéficiaire</h1>
+    <form id="beneficiaireForm" method="POST" action="{% url 'gestion:save_beneficiaire' %}" enctype="multipart/form-data" class="space-y-6">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      <!-- Informations personnelles -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <h2 class="text-xl font-semibold mb-2 col-span-full">Informations personnelles</h2>
+        <div><label class="label-required">Nom</label><input class="input" type="text" name="nom" required oninput="verifierChampTexte(this)"></div>
+        <div><label class="label-required">Prénom</label><input class="input" type="text" name="prenom" required oninput="verifierChampTexte(this)"></div>
+        <div><label class="label-required">Date de naissance</label><input class="input" type="date" name="date_naissance" required></div>
+        <div><label class="label-required">Sexe</label><select class="input" name="sexe" required><option value="">Choisir...</option><option value="M">Homme</option><option value="F">Femme</option></select></div>
+        <div><label class="label-required">Code postal</label><input class="input" type="text" name="code_postal" required oninput="verifierCodePostal(this)"></div>
+        <div><label>Email</label><input class="input" type="email" name="email" oninput="verifierEmail(this)"></div>
+        <div><label class="label-required">Téléphone</label><input class="input" type="tel" name="telephone" pattern="^\d{10}$" maxlength="10" required title="Entrez un numéro à 10 chiffres." oninput="verifierTel(this)"></div>
+      </section>
+
+      <!-- Tiers de confiance -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-2">Aidant(s)</h2>
+        <button type="button" onclick="addTiers()" class="bg-green-600 text-white px-4 py-2 rounded mb-4">+ Ajouter un aidant</button>
+        <div id="tiersContainer" class="space-y-6"></div>
+      </section>
+
+      <!-- Expérimentation -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-2">Gestion des expérimentations</h2>
+        <button type="button" onclick="addExperiment()" class="bg-green-600 text-white px-4 py-2 rounded">+ Ajouter une expérimentation</button>
+        <div id="experiencesContainer" class="mt-4 space-y-6"></div>
+      </section>
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Soumettre</button>
+    </form>
+  </div>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => addTiers());
+
+    function addTiers() {
+      const container = document.createElement('div');
+      container.className = "p-4 border border-gray-300 rounded-lg bg-gray-50";
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="label-required">Nom</label><input type="text" class="input" name="tiers_nom[]" required oninput="verifierChampTexte(this)"></div>
+          <div><label class="label-required">Prénom</label><input type="text" class="input" name="tiers_prenom[]" required oninput="verifierChampTexte(this)"></div>
+          <div><label>Email</label><input type="email" class="input" name="tiers_email[]" oninput="verifierEmail(this)"></div>
+          <div><label class="label-required">Téléphone</label><input type="tel" class="input" name="tiers_tel[]" required "></div>
+          <div><label class="label-required">Lien de parenté</label><input type="text" class="input" name="tiers_lien[]" required oninput="verifierChampTexte(this)"></div>
+        </div>
+        <div class="flex justify-end mt-4">
+          <button type="button" onclick="removeTiers(this)" title="Supprimer" class="text-red-600 hover:text-red-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0a2 2 0 012 2v0a2 2 0 01-2 2H7a2 2 0 01-2-2v0a2 2 0 012-2h10z" />
+            </svg>
+          </button>
+        </div>
+      `;
+      document.getElementById('tiersContainer').appendChild(container);
+    }
+
+    function removeTiers(button) {
+      const container = document.getElementById('tiersContainer');
+      const allTiers = container.querySelectorAll('.p-4');
+      if (allTiers.length <= 1) {
+        alert("⚠️ Vous devez conserver au moins un tiers de confiance.");
+        return;
+      }
+      button.closest('.p-4').remove();
+    }
+
+    const listeUsagersPro = ["Usager A", "Usager B", "Usager C"];
+    const tiersFields = document.getElementById("tiersFields");
+    const radios = document.getElementsByName("typeTiers");
+    // ➤ Affiche un message par défaut
+    tiersFields.innerHTML = `<p class="text-gray-500 italic col-span-2">Veuillez d'abord sélectionner un type de tiers de confiance.</p>`;
+    radios.forEach(r => r.addEventListener("change", e => {
+      const val = e.target.value;
+
+      if (val === "usager") {
+        tiersFields.innerHTML = `
+          <div><label class="label-required">Usager pro</label><input class="input" type="text" list="usagersPro" placeholder="Rechercher un usager..." required oninput="verifierUsagerPro(this)"></div>
+          <datalist id="usagersPro">
+            ${listeUsagersPro.map(p => `<option value="${p}"></option>`).join('')}
+          </datalist>
+          <div><label class="label-required">Lien de parenté</label><input class="input" type="text" required></div>
+          <div id="alerteUsager" class="text-red-600 text-sm col-span-2"></div>
+        `;
+      } else {
+        tiersFields.innerHTML = `
+          <div><label class="label-required">Nom</label><input class="input" type="text" required oninput="verifierChampTexte(this)"></div>
+          <div><label class="label-required">Prénom</label><input class="input" type="text" required oninput="verifierChampTexte(this)"></div>
+          <div><label class="label-required">Lien de parenté</label><input class="input" type="text" required oninput="verifierChampTexte(this)"></div>
+          <div><label class="label-required">Téléphone</label><input type="tel" class="input" name="tiers_tel[]"  required oninput="verifierTel(this)"></div>
+          <div><label>Email</label><input class="input" type="email" oninput="verifierEmail(this)"></div>
+        `;
+      }
+    }));
+
+   function addExperiment() {
+      const container = document.createElement('div');
+      container.className = "p-4 border border-gray-300 rounded-lg experiment-container";
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="label-required">Expérimentation</label><select class="input" name="exp_type[]" required onchange="filterStatusOptions(this)" required><option value="">Choisir...</option><option value="TelegrafiK">TelegrafiK</option><option value="Presage">Presage</option></select></div>
+          <div><label class="label-required">Coordinateur</label><input class="input" type="text" name="exp_coordinateur[]" required></div>
+          <div><label class="label-required">Cohorte</label><input class="input" type="text" name="exp_cohorte[]" required></div>
+          <div class="dates-exp-container col-span-2 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label class="label-required">Date de début</label><input class="input date-debut" type="date" name="exp_date_debut[]" required></div>
+              <div><label class="label-required">Date de fin</label><input class="input date-fin" type="date" name="exp_date_fin[]" required></div>
+            </div>
+          </div>
+          <div><label class="label-required">Méthode de recrutement</label><select class="input" name="exp_methode_recrutement[]" onchange="handleRecruitmentMethod(this)" required><option value="">Choisir...</option><option value="evenement">Evénement</option><option value="partenaire">Partenaire</option><option value="usager">Usager pro</option></select></div>
+          <div class="recrutement-detail"><label class="label-required">Détail recrutement</label><input class="input" type="text" name="exp_detail_recrutement[]" placeholder="Précisez..." required></div>
+          <div class="statut-container col-span-2 hidden">
+            <label class="label-required">Statut</label><select class="input statut-select" name="exp_statut[]" onchange="validerOrdreStatut(this); handleStatusChange(this, this.parentNode.parentNode)" required><option value="">Choisir...</option><option value="noninitie">Non initié</option><option value="visite">Visite programmée</option><option value="consentement">Consentement signé</option><option value="consentementTGK">Consentement signé (TelegrafiK)</option><option value="installation">Installation programmée</option><option value="actif">Actif</option><option value="interrompu">Interrompu</option><option value="fini">Fini</option><option value="desinstalle">Désinstallé</option></select>
+          </div>
+          <div class="status-details col-span-2"></div>
+        </div>
+        <div class="flex justify-end space-x-4 mt-8">
+          <button type="button" onclick="this.closest('.experiment-container').remove()" class="bg-gray-300 text-black px-4 py-2 rounded">Annuler</button>
+        </div>
+      `;
+      document.getElementById('experiencesContainer').appendChild(container);
+    }
+   
+    function handleStatusChange(select, container) {
+    const detailDiv = container.querySelector(".status-details");
+    detailDiv.innerHTML = "";
+
+    const statut = select.value;
+    const selects = container.querySelectorAll("select");
+    const experiment = selects.length ? selects[0].value : "";
+
+    const datesContainer = container.querySelector('.dates-exp-container');
+
+    // Blocs HTML réutilisables
+    const adresseDomicileHTML = `
+      <div class="col-span-2"><label class="label-required">Adresse domicile</label><input class="input" type="text" required></div>
+    `;
+
+    const membreRI2SHTML = `
+      <div class="col-span-2">
+        <label class="label-required">Membre RI2S</label>
+        <select class="input" required>
+          <option value="">Choisir un membre...</option>
+          <option>RI2S - Rahma</option>
+          <option>RI2S - Manon</option>
+          <option>RI2S - Prénom</option>
+        </select>
+      </div>
+    `;
+
+    // Bloc spécifique pour chaque statut
+    if (statut === "installation") {
+      detailDiv.innerHTML += `
+        <div class='grid grid-cols-2 gap-4'>
+          <div><label class="label-required">Date</label><input class='input' type='date' required></div>
+          <div><label class="label-required">Heure</label><input class='input' type='time' required></div>
+          ${membreRI2SHTML}
+          ${adresseDomicileHTML}
+        </div>
+      `;
+      if (datesContainer) datesContainer.style.display = 'block';
+
+    } else if (statut === "visite") {
+      detailDiv.innerHTML += `
+        <div class='grid grid-cols-2 gap-4'>
+          <div><label class="label-required">Date</label><input class='input' type='date' required></div>
+          <div><label class="label-required">Heure</label><input class='input' type='time' required></div>
+          ${membreRI2SHTML}
+          ${adresseDomicileHTML}
+        </div>
+      `;
+      if (datesContainer) datesContainer.style.display = 'none';
+
+    } else if (statut === "interrompu") {
+      detailDiv.innerHTML += `
+        <div class='grid grid-cols-2 gap-4'>
+          <div><label class="label-required">Causes</label><input class='input' type='text' required></div>
+          <div><label class="label-required">Date</label><input class='input' type='date' required></div>
+          <div><label class="label-required">Heure</label><input class='input' type='time' required></div>
+          ${membreRI2SHTML}
+          ${adresseDomicileHTML}
+        </div>
+      `;
+      if (datesContainer) datesContainer.style.display = 'block';
+
+    } else if (statut === "fini") {
+      detailDiv.innerHTML += `
+        <div class='grid grid-cols-2 gap-4'>
+          <div><label class="label-required">Date</label><input class='input' type='date' required></div>
+          <div><label class="label-required">Heure</label><input class='input' type='time' required></div>
+          ${membreRI2SHTML}
+          ${adresseDomicileHTML}
+        </div>
+      `;
+      if (datesContainer) datesContainer.style.display = 'block';
+
+    } else if (statut === "desinstalle") {
+      detailDiv.innerHTML += `<div><label class="label-required">Motif de désinstallation</label><input class='input' type='text' required></div>`;
+      if (datesContainer) datesContainer.style.display = 'block';
+
+    } else if (statut === "consentement" || statut === "consentementTGK"|| statut === "actif") {
+      if (datesContainer) datesContainer.style.display = 'block';
+
+    } else {
+      if (datesContainer) datesContainer.style.display = 'none';
+    }
+
+    // 📦 Affichage conditionnel des fichiers
+    const statutOkTelegrafik = ["consentementTGK", "installation", "actif", "interrompu", "fini", "desinstalle"];
+    const statutOkPresage = ["consentement", "actif", "fini", "interrompu"];
+
+    const showTelegrafik = experiment === "TelegrafiK" && statutOkTelegrafik.includes(statut);
+    const showPresage = experiment === "Presage" && statutOkPresage.includes(statut);
+
+    if (showTelegrafik) {
+      const fileInputs = `
+        <div><label class="label-required">Formulaire RI2S</label><input class="input" type="file" accept=".pdf,.jpg,.png" required></div>
+        <div><label class="label-required">Consentement TELEGRAFIK</label><input class="input" type="file" accept=".pdf,.jpg,.png" required></div>
+        <div><label class="label-required">Bon d'installation</label><input class="input" type="file" accept=".pdf,.jpg,.png" required></div>
+      `;
+
+      detailDiv.innerHTML += `
+        <div class="mt-6 p-4 border border-blue-300 rounded bg-blue-50">
+          <h3 class="text-lg font-semibold mb-2">Données liées à l'expérimentation</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${fileInputs}
+          </div>
+
+          <hr class="my-4">
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label>Date de la visite</label><input type="date" class="input"></div>
+
+            <div class="md:col-span-2">
+              <label>Disposition de télé-assistance</label>
+              <div class="space-x-4 mt-1">
+                <label><input type="checkbox"> Non</label>
+                <label><input type="checkbox"> Oui, laquelle :</label>
+                <input type="text" class="input inline-block w-auto">
+              </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <label>Capteurs à disposition</label>
+              <div class="flex flex-wrap gap-4 mt-1">
+                <label><input type="checkbox"> Borne d’appel</label>
+                <label><input type="checkbox"> Médaillon</label>
+                <label><input type="checkbox"> Actimétrie</label>
+                <label><input type="checkbox"> Nappe de pression</label>
+                <label><input type="checkbox"> Capteurs O/F</label>
+              </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <label>Capteurs à installer</label>
+              <div class="flex flex-wrap gap-4 mt-1">
+                <label><input type="checkbox"> Borne d’appel</label>
+                <label><input type="checkbox"> Médaillon</label>
+                <label><input type="checkbox"> Actimétrie</label>
+                <label><input type="checkbox"> Nappe de pression</label>
+                <label><input type="checkbox"> Capteurs O/F (IR)</label>
+              </div>
+            </div>
+            <div class="md:col-span-2 mt-4"><strong>Conditions de vie</strong></div>
+            <div><label>Médecin traitant</label><input type="text" class="input"></div>
+            <div><label>Situation</label><select class="input"><option>En couple</option><option>Seul</option></select></div>
+            <div><label>Hébergement de personne</label><select class="input"><option>Oui</option><option>Non</option></select></div>
+            <div><label>Animal de compagnie</label>
+              <select class="input"><option>Non</option><option>Oui</option></select>
+              <input type="text" class="input mt-1" placeholder="Quel animal ?">
+            </div>
+            <div><label>Coucher / lever autonome</label><select class="input"><option>Oui</option><option>Non</option></select></div>
+            <div><label>Fréquence de lever la nuit</label><input type="text" class="input"></div>
+            <div><label>Type de logement</label>
+              <select class="input">
+                <option>Maison</option><option>Appartement</option><option>Résidence sénior</option><option>Résidence autonomie</option>
+              </select>
+            </div>
+            <div><label>Nombre d’étages</label><input type="number" class="input"></div>
+            <div><label>Nombre de pièces de vie (min 1h/jour)</label><input type="text" class="input"></div>
+            <div><label>Nombre de sorties définitives utilisées</label><input type="number" class="input"></div>
+            <div><label>2 Prises proches du lit/fenêtre salon</label><select class="input"><option>Oui</option><option>Non</option></select></div>
+            <div><label>Application Otono-me installée</label><select class="input"><option>Oui</option><option>Non</option></select></div>
+            <div><label>GIR</label><input type="text" class="input"></div>
+            <div><label>Boîte à clefs</label>
+              <select class="input"><option>Non</option><option>Oui</option></select>
+              <input type="text" class="input mt-1" placeholder="Où ça ?">
+            </div>
+            <div class="md:col-span-2"><label>Commentaire visite</label><textarea class="input" rows="3"></textarea></div>
+          </div>
+        </div>
+        <div class="md:col-span-2 mt-6">
+        <strong class="text-lg block mb-2">Réseau de santé</strong>
+
+        <!-- Bouton ajouter -->
+        <button type="button" onclick="ajouterProfessionnelSante(this)" class="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+          + Ajouter un professionnel
+        </button>
+
+        <!-- Médecin traitant affiché par défaut -->
+        <div class="reseau-sante-wrapper space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-100 border p-4 rounded-lg relative">
+            <div>
+              <label class="label-required">Nom</label>
+              <input type="text" class="input" required oninput="verifierChampTexte(this)">
+            </div>
+            <div>
+              <label class="label-required">Prénom</label>
+              <input type="text" class="input" required oninput="verifierChampTexte(this)">
+            </div>
+            <div>
+              <label class="label-required">Établissement / Structure</label>
+              <input type="text" class="input" required oninput="verifierChampTexte(this)">
+            </div>
+            <div>
+              <label class="label-required">Profession</label>
+              <input type="text" class="input" value="Médecin traitant" required oninput="verifierChampTexte(this)">
+            </div>
+            <div>
+              <label class="label-required">Téléphone</label>
+              <input type="tel" class="input" name="tiers_tel[]"  required oninput="verifierTel(this)">
+            </div>
+            <div>
+              <label>Email</label>
+              <input type="email" class="input" oninput="verifierEmail(this)">
+            </div>
+          </div>
+        </div>
+      </div>
+      `;
+    }
+
+    else if (showPresage) {
+      const fileInputs = `
+        <div><label class="label-required">Consentement RI2S</label><input class="input" type="file" accept=".pdf,.jpg,.png" required></div>
+      `;
+
+      detailDiv.innerHTML += `
+        <div class="mt-6 p-4 border border-blue-300 rounded bg-blue-50">
+          <h3 class="text-lg font-semibold mb-2">Données liées à l'expérimentation</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${fileInputs}
+          </div>
+        </div>
+      `;
+    }
+    // Corrige le bug "required" sur les dates quand bloc masqué
+    if (datesContainer) {
+      const isVisible = datesContainer.style.display !== 'none';
+      const inputs = datesContainer.querySelectorAll("input");
+
+      inputs.forEach(input => {
+        if (!isVisible) {
+          input.removeAttribute("required");
+        } else {
+          input.setAttribute("required", "required");
+        }
+      });
+    }
+
+      }
+    
+      function filterStatusOptions(select) {
+      const experiment = select.value;
+      const container = select.closest('div').parentNode;
+      const statutSelect = container.querySelector('.statut-select');
+      const options = {
+        TelegrafiK: ["noninitie", "visite", "consentementTGK", "installation", "actif", "interrompu", "fini", "desinstalle"],
+        Presage: ["noninitie", "visite", "consentement", "interrompu", "fini"]
+      };
+      const labels = {
+        noninitie: "Non initié",
+        visite: "Visite programmée",
+        consentement: "Consentement signé (Actif)",
+        consentementTGK: "Consentement signé",
+        installation: "Installation programmée",
+        actif: "Actif",
+        interrompu: "Interrompu",
+        fini: "Fini",
+        desinstalle: "Désinstallé"
+      };
+      statutSelect.innerHTML = '<option value="">Choisir...</option>' +
+        options[experiment].map(v => `<option value="${v}">${labels[v]}</option>`).join('');
+      // Affiche le bloc "Statut" après sélection d'expérimentation
+      const statutBlock = container.querySelector(".statut-container");
+      if (statutBlock) {
+        statutBlock.style.display = "block";
+      }
+
+    }
+    function handleRecruitmentMethod(select) {
+      const container = select.closest('.experiment-container');
+      const detailContainer = container.querySelector('.recrutement-detail');
+      const method = select.value;
+
+      if (!method) {
+        detailContainer.innerHTML = "";
+        return;
+      }
+
+      if (method === "usager") {
+        detailContainer.innerHTML = `
+          <label class="label-required">Détail Recrutement</label>
+          <input class="input" type="text" list="usagersPro" placeholder="Rechercher un usager...">
+          <datalist id="usagersPro">${listeUsagersPro.map(p => `<option value="${p}"></option>`).join('')}</datalist>
+        `;
+      } else if (method === "evenement") {
+        detailContainer.innerHTML = `
+          <label class="label-required">Détail Recrutement</label>
+          <input class="input" type="text" placeholder="Précisez l'événement">`;
+      } else if (method === "partenaire") {
+        detailContainer.innerHTML = `
+          <label class="label-required">Détail Recrutement</label>
+          <input class="input" type="text" placeholder="Précisez le partenaire">`;
+      }
+    }
+    function verifierUsagerPro(input) {
+      const value = input.value.trim().toLowerCase();
+      const known = listeUsagersPro.some(u => u.toLowerCase() === value);
+
+      const alerte = document.getElementById("alerteUsager");
+      if (!known && value !== "") {
+        alerte.textContent = "⚠️ Usager non trouvé. Veuillez d’abord l’ajouter dans la section « Ajouter un usager pro ».";
+      } else {
+        alerte.textContent = "";
+      }
+    }
+function soumettreFormulaire() {
+  const allInputs = document.querySelectorAll("input, select, textarea");
+  for (let input of allInputs) {
+    if (input.type === "email" && input.value.trim() !== "") {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!regex.test(input.value.trim())) {
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+        input.focus();
+        input.classList.add("ring", "ring-red-500", "ring-offset-2", "transition");
+        alert(`⚠️ L'adresse e-mail est invalide : ${input.value}`);
+        return;
+      }
+    }
+    // Add telephone validation here to catch issues
+    if (input.name.includes("tiers_tel") && input.value.trim() !== "") {
+      if (!/^\d+$/.test(input.value.trim()) || input.value.trim().length !== 10) {
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+        input.focus();
+        input.classList.add("ring", "ring-red-500", "ring-offset-2", "transition");
+        alert(`⚠️ Numéro de téléphone invalide : ${input.value}`);
+        return;
+      }
+    }
+  }
+  alert("✅ Données enregistrées avec succès.");
+
+    // Recherche toutes les expérimentations
+    const experiments = document.querySelectorAll('.experiment-container');
+
+    experiments.forEach(exp => {
+      const statutSelect = exp.querySelector('.statut-select');
+      const statut = statutSelect ? statutSelect.value : "";
+
+      const statutsAvecReservation = ["visite", "installation", "interrompu", "fini"];
+
+      if (statutsAvecReservation.includes(statut)) {
+        const hasDate = exp.querySelector('input[type="date"]');
+        const hasTime = exp.querySelector('input[type="time"]');
+
+        if (hasDate && hasTime) {
+          let message = "Souhaitez-vous réserver une voiture pour cet événement ?";
+
+          if (statut === "visite") message = "Souhaitez-vous réserver une voiture pour la visite ?";
+          else if (statut === "installation") message = "Souhaitez-vous réserver une voiture pour l’installation ?";
+          else if (statut === "interrompu") message = "Souhaitez-vous réserver une voiture pour la désinstallation ?";
+          else if (statut === "fini") message = "Souhaitez-vous réserver une voiture pour la désinstallation ?";
+
+          const choix = confirm(message);
+          if (choix) {
+            alert("🚗 Réservation de voiture enregistrée !");
+          } else {
+            alert("✅ Aucun véhicule réservé.");
+          }
+        }
+      }
+    });
+  }
+function validerOrdreStatut(select) {
+  const statutActuel = select.value;
+  const container = select.closest('.experiment-container');
+  const experiment = container.querySelector('select').value;
+
+  const ordreTelegrafik = [
+    "noninitie", "visite", "consentementTGK", "installation", "actif", "interrompu", "fini", "desinstalle"
+  ];
+  const ordrePresage = [
+    "noninitie", "visite", "consentement", "actif", "interrompu", "fini"
+  ];
+
+  const ordre = experiment === "TelegrafiK" ? ordreTelegrafik : ordrePresage;
+  const indexActuel = ordre.indexOf(statutActuel);
+
+  // Statut validé précédemment (mémorisé dans l'attribut data)
+  const precedentValide = select.getAttribute("data-statut-valide");
+  const indexPrecedentValide = ordre.indexOf(precedentValide);
+
+  // Si on veut sélectionner un statut en sautant des étapes
+  if (indexActuel > 0 && indexPrecedentValide < indexActuel - 1) {
+    const statutPrecedent = ordre[indexActuel - 1];
+    alert(`⚠️ Vous devez d'abord choisir "${statutLabel(statutPrecedent)}" avant "${statutLabel(statutActuel)}".`);
+    select.value = ""; // Réinitialise la sélection
+    return;
+  }
+
+  //  Statut accepté, on le mémorise
+  select.setAttribute("data-statut-valide", statutActuel);
+}
+
+function statutLabel(code) {
+  const labels = {
+    noninitie: "Non initié",
+    visite: "Visite programmée",
+    consentement: "Consentement signé (Presage)",
+    consentementTGK: "Consentement signé (TelegrafiK)",
+    installation: "Installation programmée",
+    actif: "Actif",
+    interrompu: "Interrompu",
+    fini: "Fini",
+    desinstalle: "Désinstallé"
+  };
+  return labels[code] || code;
+}
+
+function statutLabel(code) {
+  const labels = {
+    noninitie: "Non initié",
+    visite: "Visite programmée",
+    consentement: "Consentement signé (Presage)",
+    consentementTGK: "Consentement signé (TelegrafiK)",
+    installation: "Installation programmée",
+    actif: "Actif",
+    interrompu: "Interrompu",
+    fini: "Fini",
+    desinstalle: "Désinstallé"
+  };
+  return labels[code] || code;
+}
+
+function verifierChampTexte(input) {
+  const value = input.value.trim();
+  const message = getMessageElement(input);
+
+  if (value.length < 2) {
+    afficherErreur(input, message, "Le champ doit contenir au moins 2 lettres.");
+  } else if (!/^[A-Za-zÀ-ſ' -]+$/.test(value)) {
+    afficherErreur(input, message, "Seules les lettres, apostrophes, espaces et tirets sont autorisés.");
+  } else {
+    retirerErreur(input, message);
+  }
+}
+
+function verifierTel(input) {
+  // const value = input.value.trim();
+  // const message = getMessageElement(input);
+  // console.log("Telephone value:", value, "Length:", value.length, "Is digits:", /^\d+$/.test(value));
+
+  // if (!/^\d+$/.test(value)) {
+  //   afficherErreur(input, message, "Seuls les chiffres sont autorisés.");
+  // } else if (value.length !== 10) {
+  //   afficherErreur(input, message, "Le numéro doit contenir exactement 10 chiffres.");
+  // } else {
+  //   retirerErreur(input, message);
+  //   input.blur(); // Force blur to trigger UI update
+  //   input.focus(); // Refocus to ensure state refresh
+  // }
+}
+
+function verifierEmail(input) {
+  const value = input.value.trim();
+  const message = getMessageElement(input);
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!regex.test(value)) {
+    afficherErreur(input, message, "L'adresse email doit être du type nom@domaine.com.");
+  } else {
+    retirerErreur(input, message);
+  }
+}
+
+function verifierCodePostal(input) {
+  const value = input.value.trim();
+  const message = getMessageElement(input);
+
+  if (!/^\d+$/.test(value)) {
+    afficherErreur(input, message, "Seuls les chiffres sont autorisés.");
+  } else if (value.length !== 5) {
+    afficherErreur(input, message, "Le code postal doit contenir exactement 5 chiffres.");
+  } else {
+    retirerErreur(input, message);
+  }
+}
+
+function afficherErreur(input, messageElement, texte) {
+  input.classList.add("ring", "ring-red-500", "ring-offset-2");
+  messageElement.textContent = "⚠️ " + texte;
+  messageElement.classList.remove("hidden");
+}
+
+function retirerErreur(input, messageElement) {
+  console.log("Removing error for input:", input.value); // Debug log
+  input.classList.remove("ring", "ring-red-500", "ring-offset-2");
+  messageElement.classList.add("hidden");
+  messageElement.textContent = ""; // Clear the message
+}
+
+function getMessageElement(input) {
+  let message = input.nextElementSibling;
+  if (!message || !message.classList.contains("text-red-600")) {
+    message = document.createElement("div");
+    message.className = "text-red-600 text-sm hidden";
+    input.insertAdjacentElement('afterend', message);
+  }
+  return message;
+}
+
+function ajouterProfessionnelSante(button) {
+  const wrapper = button.closest('.md\\:col-span-2').querySelector('.reseau-sante-wrapper');
+  const container = document.createElement('div');
+  container.className = "grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border p-4 rounded-lg relative";
+
+  container.innerHTML = `
+    <div>
+      <label class="label-required">Nom</label>
+      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+    </div>
+    <div>
+      <label class="label-required">Prénom</label>
+      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+    </div>
+    <div>
+      <label class="label-required">Établissement / Structure</label>
+      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+    </div>
+    <div>
+      <label class="label-required">Profession</label>
+      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+    </div>
+    <div>
+      <label class="label-required">Téléphone</label>
+      <input type="tel" class="input" name="tiers_tel[]"  required oninput="verifierTel(this)">
+    </div>
+    <div>
+      <label>Email</label>
+      <input type="email" class="input" oninput="verifierEmail(this)">
+    </div>
+
+    <!-- Messages d’erreur sous chaque champ -->
+    <div class="md:col-span-2 flex justify-end mt-2">
+      <button type="button" onclick="this.closest('div.grid').remove()" title="Supprimer ce professionnel"
+        class="text-red-600 hover:text-red-800 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Supprimer
+      </button>
+    </div>
+  `;
+
+  wrapper.appendChild(container);
+}
+
+document.getElementById('beneficiaireForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  // Log the form data to the console
+  console.log("Form Data being sent:");
+  for (let [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+  }
+
+  // Validate all inputs
+  const allInputs = document.querySelectorAll("input, select, textarea");
+  let hasError = false;
+  for (let input of allInputs) {
+    if (input.type === "email" && input.value.trim() !== "") {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!regex.test(input.value.trim())) {
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+        input.focus();
+        input.classList.add("ring", "ring-red-500", "ring-offset-2", "transition");
+        alert(`⚠️ L'adresse e-mail est invalide : ${input.value}`);
+        hasError = true;
+        return;
+      }
+    }
+    if (input.name.includes("tiers_tel") && input.value.trim() !== "") {
+      if (!/^\d+$/.test(input.value.trim()) || input.value.trim().length !== 10) {
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+        input.focus();
+        input.classList.add("ring", "ring-red-500", "ring-offset-2", "transition");
+        alert(`⚠️ Numéro de téléphone invalide : ${input.value}`);
+        hasError = true;
+        return;
+      }
+    }
+  }
+
+  if (hasError) return;
+
+  // Submit form data
+  fetch('/save-beneficiaire/', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  })
+  .then(data => {
+    if (!data.success) throw new Error(data.error || 'Submission failed');
+
+    // Handle car reservations for experiments
+    const experiments = document.querySelectorAll('.experiment-container');
+    let allReservationsHandled = true;
+
+    experiments.forEach(exp => {
+      const statutSelect = exp.querySelector('.statut-select');
+      const statut = statutSelect ? statutSelect.value : "";
+      const statutsAvecReservation = ["visite", "installation", "interrompu", "fini"];
+
+      if (statutsAvecReservation.includes(statut)) {
+        const hasDate = exp.querySelector('input[type="date"]');
+        const hasTime = exp.querySelector('input[type="time"]');
+
+        if (hasDate && hasTime) {
+          let message = "Souhaitez-vous réserver une voiture pour cet événement ?";
+          if (statut === "visite") message = "Souhaitez-vous réserver une voiture pour la visite ?";
+          else if (statut === "installation") message = "Souhaitez-vous réserver une voiture pour l’installation ?";
+          else if (statut === "interrompu") message = "Souhaitez-vous réserver une voiture pour la désinstallation ?";
+          else if (statut === "fini") message = "Souhaitez-vous réserver une voiture pour la désinstallation ?";
+
+          const choix = confirm(message);
+          if (choix) {
+            alert("🚗 Réservation de voiture enregistrée !");
+          } else {
+            alert("✅ Aucun véhicule réservé.");
+          }
+        }
+      }
+    });
+
+    // If all submissions and reservations are handled successfully, show final alert
+    alert("✅ Toutes les données ont été enregistrées avec succès !");
+  })
+  .catch(error => {
+    alert('❌ Erreur lors de la soumission : ' + error.message);
+  });
+});
+</script>
+</body>
+</html>

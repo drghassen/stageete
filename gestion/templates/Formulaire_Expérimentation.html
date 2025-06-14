@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajouter une Expérimentation</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="max-w-xl mx-auto mt-10 p-8 bg-white shadow-2xl rounded-xl">
+    <h1 class="text-2xl font-bold text-center mb-6">Ajouter une expérimentation</h1>
+
+    <form id="formExperimentation" method="POST" action="http://127.0.0.1:8000/create-experimentation/" enctype="multipart/form-data">
+        {% csrf_token %}
+      <div>
+        <label class="block font-semibold">Nom de l'expérimentation <span class="text-red-500">*</span></label>
+        <input type="text" name="nom" required class="w-full border rounded p-2">
+      </div>
+
+      <div>
+        <label class="block font-semibold">Entreprise partenaire <span class="text-red-500">*</span></label>
+        <input type="text" name="entreprise" required class="w-full border rounded p-2">
+      </div>
+
+      <div class="border-t pt-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-lg font-semibold">Définir les cohortes</h2>
+          <button type="button" onclick="ajouterCohorte()" class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded">+ Ajouter une cohorte</button>
+        </div>
+        <div id="cohortesContainer" class="space-y-4">
+          <div class="cohorte-item">
+            <label class="block font-semibold">Nom de la cohorte <span class="text-red-500">*</span></label>
+            <input type="text" name="cohorte[]" required class="w-full border rounded p-2 mb-2">
+
+            <label class="block font-semibold">Date de début de la cohorte <span class="text-red-500">*</span></label>
+            <input type="date" name="cohorte_date_debut[]" required class="w-full border rounded p-2 mb-2">
+
+            <label class="block font-semibold">Date de fin de la cohorte</label>
+            <input type="date" name="cohorte_date_fin[]" class="w-full border rounded p-2">
+            <hr class="mt-4">
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t pt-4">
+        <h2 class="text-lg font-semibold mb-2">Dates de l'expérimentation</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block font-semibold">Date de début <span class="text-red-500">*</span></label>
+            <input type="date" name="date_debut" required class="w-full border rounded p-2">
+          </div>
+          <div>
+            <label class="block font-semibold">Date de fin (prévue ou effective)</label>
+            <input type="date" name="date_fin" class="w-full border rounded p-2">
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t pt-4">
+        <h2 class="text-lg font-semibold mb-2">Contact référent</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block font-semibold">Nom du contact</label>
+            <input type="text" id="contactNom" name="contactNom" required class="w-full border rounded p-2" oninput="validerNomContact(this)">
+            <div class="text-red-600 text-sm message-erreur mt-1"></div>
+          </div>
+          <div>
+            <label class="block font-semibold">Email</label>
+            <input type="text" id="contactEmail" name="contactEmail" required class="w-full border rounded p-2" oninput="validerEmailContact(this)">
+            <div class="text-red-600 text-sm message-erreur mt-1"></div>
+          </div>
+          <div>
+            <label class="block font-semibold">Téléphone</label>
+            <input type="text" id="contactTel" name="contactTel" required class="w-full border rounded p-2" oninput="validerTelContact(this)">
+            <div class="text-red-600 text-sm message-erreur mt-1"></div>
+          </div>
+        </div>
+      </div>
+
+
+      <div>
+        <label class="block font-semibold">Remarques</label>
+        <textarea name="remarques" rows="3" class="w-full border rounded p-2"></textarea>
+      </div>
+
+      <div class="border-t pt-4">
+      <h2 class="text-lg font-semibold mb-2">Définition des champs de données liées à l'expérimentation</h2>
+      <div id="customFieldsContainer" class="space-y-4"></div>
+      <button type="button" onclick="ajouterChampPerso()" class="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-blue-700">
+        + Ajouter un champ
+      </button>
+    </div>
+  
+
+      <div class="flex justify-end gap-4 pt-4">
+        <button type="reset" class="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400">Annuler</button>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function ajouterCohorte() {
+  const container = document.getElementById("cohortesContainer");
+  const bloc = document.createElement("div");
+  bloc.classList.add("cohorte-item");
+  bloc.innerHTML = `
+    <label class="block font-semibold">Nom de la cohorte <span class="text-red-500">*</span></label>
+    <input type="text" name="cohorte[]" required class="w-full border rounded p-2 mb-2">
+
+    <label class="block font-semibold">Date de début de la cohorte <span class="text-red-500">*</span></label>
+    <input type="date" name="cohorte_date_debut[]" required class="w-full border rounded p-2 mb-2">
+
+    <label class="block font-semibold">Date de fin de la cohorte</label>
+    <input type="date" name="cohorte_date_fin[]" class="w-full border rounded p-2">
+    <hr class="mt-4">
+  `;
+  container.appendChild(bloc);
+}
+
+
+    function ajouterChampPerso() {
+  const container = document.getElementById("customFieldsContainer");
+  const div = document.createElement("div");
+  div.className = "grid grid-cols-1 md:grid-cols-3 gap-4 items-start relative group border p-4 rounded bg-gray-50";
+
+  div.innerHTML = `
+    <input type="text" name="custom_field_name[]" placeholder="Nom du champ..." required 
+           class="border rounded p-2" pattern="[a-zA-Z0-9_]+" title="Lettres, chiffres et underscores seulement">
+    
+    <select name="custom_field_type[]" class="border rounded p-2" onchange="changerTypeChamp(this)" required>
+      <option value="">Type de champ...</option>
+      <option value="text">Texte</option>
+      <option value="date">Date</option>
+      <option value="number">Nombre</option>
+      <option value="file">Fichier</option>
+      <option value="select">Liste déroulante</option>
+    </select>
+    
+    <div class="champ-input-wrapper"></div>
+
+    <button type="button" onclick="this.closest('div').remove()" 
+      class="absolute -top-3 -right-3 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow hover:bg-red-700"
+      title="Supprimer ce champ">
+      &times;
+    </button>
+  `;
+
+  container.appendChild(div);
+}
+
+
+    function changerTypeChamp(select) {
+      const wrapper = select.parentElement.querySelector(".champ-input-wrapper");
+      const type = select.value;
+
+      if (["text", "date", "number", "file"].includes(type)) {
+        wrapper.innerHTML = `<input type="${type}" class="border rounded p-2 w-full" required>`;
+      } else if (type === "select") {
+        const id = `select-options-${Date.now()}`; // identifiant unique pour le champ
+
+        wrapper.innerHTML = `
+          <div class="space-y-2" id="${id}">
+            <div class="option-line flex items-center gap-2">
+              <input type="text" class="border rounded p-2 w-full" placeholder="Option 1" required>
+              <button type="button" onclick="supprimerOption(this)" class="text-red-600 hover:text-red-800 text-lg font-bold">&times;</button>
+            </div>
+            <div class="option-line flex items-center gap-2">
+              <input type="text" class="border rounded p-2 w-full" placeholder="Option 2" required>
+              <button type="button" onclick="supprimerOption(this)" class="text-red-600 hover:text-red-800 text-lg font-bold">&times;</button>
+            </div>
+          </div>
+          <button type="button" onclick="ajouterOption('${id}')" class="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">+ Ajouter une option</button>
+        `;
+      } else {
+        wrapper.innerHTML = "";
+      }
+    }
+
+
+    function creerSelectDepuisTexte(input) {
+      const options = input.value.split(",").map(opt => opt.trim()).filter(Boolean);
+      const wrapper = input.parentElement;
+
+      if (options.length < 2) {
+        alert("❌ Vous devez saisir au moins 2 options pour une liste déroulante.");
+        input.focus();
+        return;
+      }
+
+      const select = document.createElement("select");
+      select.className = "border rounded p-2 w-full";
+      options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.textContent = opt;
+        select.appendChild(option);
+      });
+
+      wrapper.innerHTML = "";
+      wrapper.appendChild(select);
+    }
+
+    function ajouterOption(id) {
+      const container = document.getElementById(id);
+      const div = document.createElement("div");
+      div.className = "option-line flex items-center gap-2 mt-1";
+      div.innerHTML = `
+        <input type="text" class="border rounded p-2 w-full" placeholder="Nouvelle option" required>
+        <button type="button" onclick="supprimerOption(this)" class="text-red-600 hover:text-red-800 text-lg font-bold">&times;</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function supprimerOption(button) {
+      const container = button.closest(".option-line");
+      const parent = button.closest("div[id]");
+      if (parent.querySelectorAll(".option-line").length <= 2) {
+        alert("⚠️ Une liste doit contenir au moins 2 options.");
+        return;
+      }
+      container.remove();
+    }
+
+
+
+document.getElementById("formExperimentation").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    console.log("Début de la soumission du formulaire");
+
+    // Validate all fields first
+    console.log("Validation du formulaire en cours...");
+    if (!validateForm()) {
+      console.log("Validation échouée");
+      return;
+    }
+    console.log("Validation réussie");
+
+    // Collect custom fields data
+    console.log("Collecte des champs personnalisés...");
+    const customFields = collectCustomFields();
+    console.log("Champs personnalisés collectés:", customFields);
+
+    // Create FormData object
+    console.log("Création de l'objet FormData...");
+    const formData = new FormData(this);
+    formData.append('custom_fields', JSON.stringify(customFields));
+    console.log("FormData préparé:", Array.from(formData.entries()));
+
+    try {
+      console.log("Envoi de la requête POST à", this.action);
+      const response = await fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      });
+
+      console.log("Réponse reçue, statut:", response.status);
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Résultat de la requête:", result);
+        if (result.success) {
+          console.log("Succès, redirection vers:", result.redirect_url);
+          window.location.href = `${result.redirect_url}?message=${encodeURIComponent(result.message)}`;
+        } else {
+          console.log("Erreur dans la réponse:", result.error);
+          showFormError(result.error);
+        }
+      } else {
+        console.error("Réponse non OK, statut:", response.status);
+        throw new Error('Network response was not ok');
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du formulaire:", error);
+      showFormError("Une erreur s'est produite lors de l'envoi du formulaire.");
+    }
+  });
+function validateForm() {
+  console.log("=== DÉBUT VALIDATION ===");
+  let isValid = true;
+  const form = document.getElementById("formExperimentation");
+  
+  // Validation des champs contact
+  console.group("Validation des contacts");
+  const nom = document.getElementById('contactNom');
+  const email = document.getElementById('contactEmail');
+  const tel = document.getElementById('contactTel');
+  
+  console.log("Validation du nom de contact:", nom.value.trim() || "<vide>");
+  validerNomContact(nom);
+  console.log("Validation de l'email:", email.value.trim() || "<vide>");
+  validerEmailContact(email);
+  console.log("Validation du téléphone:", tel.value.trim() || "<vide>");
+  validerTelContact(tel);
+  
+  const contactErrors = [
+    nom.parentElement.querySelector(".message-erreur").textContent,
+    email.parentElement.querySelector(".message-erreur").textContent,
+    tel.parentElement.querySelector(".message-erreur").textContent
+  ].filter(msg => msg.trim() !== '');
+  
+  if (contactErrors.length) {
+    console.error("Erreurs contact:", contactErrors);
+    isValid = false;
+  } else {
+    console.log("Aucune erreur dans les champs contact");
+  }
+  console.groupEnd();
+
+  // Validation des champs requis
+  console.group("Validation des champs requis");
+  const requiredFields = form.querySelectorAll('[required]');
+  const missingFields = [];
+  
+  requiredFields.forEach(field => {
+    console.log(`Vérification du champ: ${field.name}, valeur: "${field.value.trim() || '<vide>'}"`);
+    if (!field.value.trim()) {
+      console.warn(`Champ requis manquant: ${field.name}`);
+      field.classList.add('border-red-500');
+      missingFields.push(field.name);
+      isValid = false;
+    } else {
+      field.classList.remove('border-red-500');
+    }
+  });
+  
+  if (missingFields.length) {
+    console.error("Champs requis manquants:", missingFields);
+  } else {
+    console.log("Tous les champs requis sont remplis");
+  }
+  console.groupEnd();
+
+  // Vérification des messages d'erreur affichés
+  console.group("Vérification des messages d'erreur");
+  const errorMessages = Array.from(form.querySelectorAll('.message-erreur'))
+    .filter(el => el.textContent.trim() !== '')
+    .map(el => el.textContent.trim());
+  
+  console.log(`Total erreurs détectées: ${errorMessages.length}`);
+  if (errorMessages.length) {
+    console.error("Messages d'erreur présents:", errorMessages);
+    isValid = false;
+  } else {
+    console.log("Aucun message d'erreur affiché");
+  }
+  console.groupEnd();
+
+  // Résultat final
+  if (!isValid) {
+    console.error("VALIDATION ÉCHOUÉE");
+    console.error("Résumé des erreurs:", {
+      contactErrors,
+      missingFields,
+      errorMessages
+    });
+  } else {
+    console.log("VALIDATION RÉUSSIE");
+  }
+
+  return isValid;
+}
+function collectCustomFields() {
+  const customFields = [];
+  document.querySelectorAll('#customFieldsContainer > div').forEach(div => {
+    const nameInput = div.querySelector('input[type="text"]');
+    const typeSelect = div.querySelector('select');
+    
+    if (nameInput && typeSelect && nameInput.value && typeSelect.value) {
+      const field = {
+        name: nameInput.value,
+        type: typeSelect.value,
+        options: []
+      };
+      
+      if (field.type === 'select') {
+        field.options = Array.from(div.querySelectorAll('.option-line input'))
+                          .map(i => i.value)
+                          .filter(v => v.trim() !== '');
+      }
+      
+      customFields.push(field);
+    }
+  });
+  return customFields;
+}
+
+function showFormError(message) {
+  const form = document.getElementById("formExperimentation");
+  // Remove existing error messages
+  const existingErrors = form.querySelectorAll('.form-error-message');
+  existingErrors.forEach(error => error.remove());
+  
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'form-error-message bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4';
+  errorDiv.textContent = message;
+  form.prepend(errorDiv);
+  window.scrollTo(0, 0);
+}
+
+    // Validation pour les champs contact
+    function validerNomContact(input) {
+      const valeur = input.value.trim();
+      const regexNom = /^[A-Za-zÀ-ÿ \-']{2,}$/;
+      if (!regexNom.test(valeur)) {
+        setErreur(input, "Veuillez saisir un nom valide (lettres uniquement).");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function validerEmailContact(input) {
+      const valeur = input.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur)) {
+        setErreur(input, "L'adresse e-mail semble incorrecte (ex: nom@exemple.com).");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function validerTelContact(input) {
+      const valeur = input.value.trim();
+      if (!/^\d{10}$/.test(valeur)) {
+        setErreur(input, "Le téléphone doit contenir exactement 10 chiffres.");
+      } else {
+        clearErreur(input);
+      }
+    }
+
+    function setErreur(input, message) {
+      const msg = input.parentElement.querySelector(".message-erreur");
+      if (msg) {
+        msg.textContent = message;
+        input.classList.add("border-red-500");
+      }
+    }
+
+    function clearErreur(input) {
+      const msg = input.parentElement.querySelector(".message-erreur");
+      if (msg) {
+        msg.textContent = "";
+        input.classList.remove("border-red-500");
+      }
+    }
+
+    function validerNomContact(input) {
+      const valeur = input.value.trim();
+      const msg = input.parentElement.querySelector(".message-erreur");
+      const regexNom = /^[A-Za-zÀ-ÿ \-']{2,}$/;
+
+      if (!regexNom.test(valeur)) {
+        msg.textContent = "❌ Entrez un nom valide (au moins 2 lettres, lettres uniquement).";
+        input.classList.add("border-red-500");
+      } else {
+        msg.textContent = "";
+        input.classList.remove("border-red-500");
+      }
+    }
+
+    function validerEmailContact(input) {
+      const valeur = input.value.trim();
+      const msg = input.parentElement.querySelector(".message-erreur");
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur)) {
+        msg.textContent = "❌ Format e-mail invalide (ex : nom@exemple.com).";
+        input.classList.add("border-red-500");
+      } else {
+        msg.textContent = "";
+        input.classList.remove("border-red-500");
+      }
+    }
+
+    function validerTelContact(input) {
+      const valeur = input.value.trim();
+      const msg = input.parentElement.querySelector(".message-erreur");
+
+      if (!/^\d{10}$/.test(valeur)) {
+        msg.textContent = "❌ Le numéro doit contenir exactement 10 chiffres.";
+        input.classList.add("border-red-500");
+      } else {
+        msg.textContent = "";
+        input.classList.remove("border-red-500");
+      }
+    }
+
+
+
+  </script>
+</body>
+</html>
