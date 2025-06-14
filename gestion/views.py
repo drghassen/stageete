@@ -1,13 +1,39 @@
-from django.shortcuts import render, redirect
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.urls import reverse
 from urllib.parse import quote
 from .models import Beneficiaire, Aidant, ChampPersonnalise, ContactReferent, Experimentation, ExperimentationGenerale, Fichier, Cohorte, UsagerPro
 from .forms import ContactReferentForm, ExperimentationGeneraleForm, CohorteForm, ChampPersonnaliseForm, UsagerProForm
+from .serializers import BeneficiaireSerializer
 
 from django.forms import inlineformset_factory
 from django.views.decorators.csrf import csrf_exempt
 import json
+
+def beneficiaire_detail_view(request, pk):
+    return render(request, 'beneficiaire_detail.html', {'beneficiary_id': pk})
+
+
+class BeneficiaireUpdateView(APIView):
+    def post(self, request, pk):
+        try:
+            beneficiaire = Beneficiaire.objects.get(pk=pk)
+            experimentation = beneficiaire.experimentations.first()
+            if 'remarques' in request.data:
+                experimentation.remarques = request.data['remarques']
+                experimentation.save()
+            if 'fichier' in request.FILES:
+                Fichier.objects.create(
+                    experimentation=experimentation,
+                    fichier=request.FILES['fichier'],
+                    type_fichier='formulaire_ri2s'
+                )
+            return Response({"message": "Données enregistrées"}, status=status.HTTP_200_OK)
+        except Beneficiaire.DoesNotExist:
+            return Response({"error": "Bénéficiaire non trouvé"}, status=status.HTTP_404_NOT_FOUND)
 
 def menu_view(request):
     return render(request, 'menu.html')
@@ -235,3 +261,14 @@ def add_usager_pro(request):
                 "details": str(e)
             }, status=400)
     return JsonResponse({"error": "Méthode non autorisée"}, status=405)
+
+class BeneficiaireDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            beneficiaire = Beneficiaire.objects.get(pk=pk)
+            serializer = BeneficiaireSerializer(beneficiaire)
+            return Response(serializer.data)
+        except Beneficiaire.DoesNotExist:
+            return Response({"error": "Bénéficiaire non trouvé"}, status=status.HTTP_404_NOT_FOUND)
+        
+        

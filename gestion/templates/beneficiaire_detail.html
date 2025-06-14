@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consultation Bénéficiaire</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <div class="max-w-4xl mx-auto p-8 mt-10 bg-white rounded-2xl shadow-2xl">
+    <h1 class="text-3xl font-bold mb-8 text-center text-green-700">Fiche du bénéficiaire</h1>
+
+    <!-- Informations personnelles -->
+    <section class="mb-8 border-b pb-6">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Informations personnelles</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+        <div><strong>Nom :</strong> <span id="nom"></span></div>
+        <div><strong>Prénom :</strong> <span id="prenom"></span></div>
+        <div><strong>Date de naissance :</strong> <span id="date_naissance"></span></div>
+        <div><strong>Sexe :</strong> <span id="sexe"></span></div>
+        <div><strong>Email :</strong> <span id="email"></span></div>
+        <div><strong>Téléphone :</strong> <span id="telephone"></span></div>
+      </div>
+    </section>
+
+    <!-- Aidants -->
+    <section class="mb-8 border-b pb-6">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Aidant(s)</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg" id="aidants-container">
+        <!-- Les aidants seront ajoutés ici dynamiquement par JavaScript -->
+      </div>
+    </section>
+
+    <!-- Expérimentations -->
+    <section class="mb-8 border-b pb-6">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Expérimentations</h2>
+      <div id="experimentations-container">
+        <!-- Les expérimentations seront ajoutées ici dynamiquement -->
+      </div>
+    </section>
+
+    <!-- Données liées à l'expérimentation -->
+    <section class="mb-8 border-b pb-6">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-700">Données liées à l'expérimentation</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-base bg-gray-50 p-6 rounded-xl shadow-inner border" id="donnees-experimentation">
+        <!-- Data will be populated dynamically -->
+      </div>
+    </section>
+
+    <!-- Réseau de santé -->
+    <section class="mb-8 border-b pb-6">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-700">Réseau de santé</h2>
+      <div class="space-y-6" id="reseau-sante">
+      </div>
+    </section>
+
+    <!-- Données cliniques -->
+    <section class="mb-8 border-b pb-6">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Données cliniques</h2>
+      <input type="file" accept=".pdf,.doc,.docx,.jpg,.png" class="border rounded p-3 w-full text-base" id="donnees-cliniques">
+    </section>
+
+    <!-- Remarques -->
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700">Commentaires</h2>
+      <textarea class="w-full p-3 border rounded text-base" rows="4" placeholder="Saisir vos remarques ici..." id="remarques"></textarea>
+    </section>
+
+    <!-- Boutons -->
+    <div class="flex justify-end gap-4">
+      <button class="px-6 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 text-base" onclick="window.history.back()">Annuler</button>
+      <button class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-base" onclick="saveData()">Enregistrer</button>
+    </div>
+  </div>
+
+  <script>
+    // Fonction pour formater la date au format français
+    function formatFrenchDate(dateString) {
+      if (!dateString) return 'Non renseignée';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR');
+    }
+
+    // Fonction pour traduire le statut
+    function translateStatut(statut) {
+      const translations = {
+        'noninitie': 'Non initié',
+        'desinstalle': 'Désinstallé'
+      };
+      return translations[statut] || statut;
+    }
+
+    // Fonction pour traduire le sexe
+    function translateSexe(sexe) {
+      return sexe === 'F' ? 'Femme' : 'Homme';
+    }
+
+    // Fonction pour peupler le formulaire avec les données
+    function populateForm(data) {
+      // Informations personnelles
+      document.getElementById('nom').textContent = data.nom;
+      document.getElementById('prenom').textContent = data.prenom;
+      document.getElementById('date_naissance').textContent = formatFrenchDate(data.date_naissance);
+      document.getElementById('sexe').textContent = translateSexe(data.sexe);
+      document.getElementById('email').textContent = data.email;
+      document.getElementById('telephone').textContent = data.telephone;
+
+      // Aidants
+      const aidantsContainer = document.getElementById('aidants-container');
+aidantsContainer.innerHTML = ''; // Vider le contenu existant
+
+if (data.aidants && data.aidants.length > 0) {
+  data.aidants.forEach(aidant => {
+    const aidantHtml = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+        <div><strong>Type :</strong> Usager pro</div>
+        <div><strong>Lien de parenté :</strong> ${aidant.lien_parente || 'Non renseigné'}</div>
+        <div><strong>Nom :</strong> ${aidant.nom || 'Non renseigné'}</div>
+        <div><strong>Prénom :</strong> ${aidant.prenom || 'Non renseigné'}</div>
+        <div><strong>Téléphone :</strong> ${aidant.telephone || 'Non renseigné'}</div>
+        <div><strong>Email :</strong> ${aidant.email || 'Non renseigné'}</div>
+      </div>
+    `;
+    aidantsContainer.innerHTML += aidantHtml;
+  });
+} else {
+  aidantsContainer.innerHTML = '<p class="text-gray-500">Aucun aidant renseigné</p>';
+}
+     // Fonction de traduction des statuts
+function translateStatut(statut) {
+  const translations = {
+    'noninitie': 'Non initié',
+    'visite': 'Visite programmée',
+    'consentement': 'Consentement signé',
+    'consentementTGK': 'Consentement signé (TelegrafiK)',
+    'installation': 'Installation programmée',
+    'actif': 'Actif',
+    'interrompu': 'Interrompu',
+    'fini': 'Fini',
+    'desinstalle': 'Désinstallé'
+  };
+  return translations[statut] || statut;
+}
+
+// Fonction de traduction des types
+function translateType(type) {
+  return type === 'TelegrafiK' ? 'TélégraphiK' : type; // Exemple de personnalisation
+}
+
+// Affichage des expérimentations
+const expContainer = document.getElementById('experimentations-container');
+expContainer.innerHTML = ''; // Vider le contenu existant
+
+if (data.experimentations && data.experimentations.length > 0) {
+  data.experimentations.forEach(exp => {
+    const expHtml = `
+      <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+          <div>
+            <strong>Type :</strong><br>
+            <span class="text-blue-600 font-medium">${translateType(exp.type)}</span>
+          </div>
+          <div>
+            <strong>Cohorte :</strong><br>
+            <span>${exp.cohorte || 'Non renseigné'}</span>
+          </div>
+          <div>
+            <strong>Date de début :</strong><br>
+            <span>${formatFrenchDate(exp.date_debut)}</span>
+          </div>
+          <div>
+            <strong>Date de fin :</strong><br>
+            <span>${formatFrenchDate(exp.date_fin)}</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <strong>Statut :</strong><br>
+            <span class="px-2 py-1 rounded text-sm ${
+              ['actif', 'fini'].includes(exp.statut) ? 'bg-green-100 text-green-800' :
+              ['interrompu', 'desinstalle'].includes(exp.statut) ? 'bg-red-100 text-red-800' :
+              'bg-yellow-100 text-yellow-800'
+            }">
+              ${translateStatut(exp.statut)}
+            </span>
+          </div>
+          <div>
+            <strong>Méthode recrutement :</strong><br>
+            <span>${exp.methode_recrutement || 'Non renseigné'}</span>
+          </div>
+          <div>
+            <strong>Coordinateur :</strong><br>
+            <span>${exp.coordinateur || 'Non renseigné'}</span>
+          </div>
+          <div>
+            <strong>Détail recrutement :</strong><br>
+            <span>${exp.detail_recrutement || 'Non renseigné'}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    expContainer.innerHTML += expHtml;
+  });
+} else {
+  expContainer.innerHTML = '<p class="text-gray-500 italic">Aucune expérimentation renseignée</p>';
+}
+      // Réseau de santé (si les données existent dans la réponse)
+      const reseauSanteContainer = document.getElementById('reseau-sante');
+      reseauSanteContainer.innerHTML = ''; // Clear previous content
+      if (data.usagers_pro && data.usagers_pro.length > 0) {
+        data.usagers_pro.forEach(pro => {
+          const proHtml = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-base bg-gray-50 p-6 rounded-xl shadow-inner border">
+              <div><strong>Nom :</strong> ${pro.nom || 'Non renseigné'}</div>
+              <div><strong>Prénom :</strong> ${pro.prenom || 'Non renseigné'}</div>
+              <div><strong>Établissement :</strong> ${pro.structure || 'Non renseigné'}</div>
+              <div><strong>Profession :</strong> ${pro.profession || 'Non renseigné'}</div>
+              <div><strong>Téléphone :</strong> ${pro.telephone || 'Non renseigné'}</div>
+              <div><strong>Email :</strong> ${pro.email || 'Non renseigné'}</div>
+            </div>
+          `;
+          reseauSanteContainer.innerHTML += proHtml;
+        });
+      } else {
+        reseauSanteContainer.innerHTML = '<p>Aucun professionnel de santé renseigné</p>';
+      }
+    }
+
+    // Fonction pour charger les données
+    async function fetchBeneficiaryData() {
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/beneficiaire/${beneficiaryId}/`);
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des données');
+        }
+        const data = await response.json();
+        populateForm(data);
+      } catch (error) {
+        console.error('Error:', error);
+        alert(error.message);
+      }
+    }
+
+    // Fonction pour sauvegarder les données
+    async function saveData() {
+      const formData = new FormData();
+      const remarques = document.getElementById('remarques').value;
+      const fileInput = document.getElementById('donnees-cliniques');
+      
+      formData.append('remarques', remarques);
+      if (fileInput.files.length > 0) {
+        formData.append('fichier', fileInput.files[0]);
+      }
+
+      try {
+        const response = await fetch(`/beneficiaire/${beneficiaryId}/update/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors de la sauvegarde');
+        }
+        
+        const result = await response.json();
+        alert(result.message || 'Données sauvegardées avec succès');
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Erreur lors de la sauvegarde: ' + error.message);
+      }
+    }
+
+    // Récupérer l'ID du bénéficiaire depuis l'URL
+    const beneficiaryId = window.location.pathname.split('/').filter(Boolean).pop();
+
+    // Charger les données au chargement de la page
+    document.addEventListener('DOMContentLoaded', fetchBeneficiaryData);
+  </script>
+</body>
+</html>
