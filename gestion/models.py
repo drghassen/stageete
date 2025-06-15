@@ -9,10 +9,13 @@ class Beneficiaire(models.Model):
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
     date_naissance = models.DateField()
-    sexe = models.CharField(max_length=1)
-    code_postal = models.CharField(max_length=10)
-    email = models.EmailField()
-    telephone = models.CharField(max_length=15)
+    sexe = models.CharField(max_length=1, choices=[('M', 'Homme'), ('F', 'Femme')])
+    code_postal = models.CharField(max_length=5, validators=[RegexValidator(r'^\d{5}$', message="Le code postal doit contenir exactement 5 chiffres.")])
+    email = models.EmailField(blank=True)
+    telephone = models.CharField(
+        max_length=10,
+        validators=[RegexValidator(r'^\d{10}$', message="Le numéro doit contenir exactement 10 chiffres.")]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -65,6 +68,33 @@ class Experimentation(models.Model):
         ('usager', 'Usager pro'),
     ]
 
+    SITUATION_CHOICES = [
+        ('couple', 'En couple'),
+        ('seul', 'Seul'),
+    ]
+
+    HEBERGEMENT_PERSONNE_CHOICES = [
+        ('oui', 'Oui'),
+        ('non', 'Non'),
+    ]
+
+    ANIMAL_COMPAGNIE_CHOICES = [
+        ('oui', 'Oui'),
+        ('non', 'Non'),
+    ]
+
+    COUCHER_LEVER_AUTONOME_CHOICES = [
+        ('oui', 'Oui'),
+        ('non', 'Non'),
+    ]
+
+    TYPE_LOGEMENT_CHOICES = [
+        ('maison', 'Maison'),
+        ('appartement', 'Appartement'),
+        ('residence_senior', 'Résidence sénior'),
+        ('residence_autonomie', 'Résidence autonomie'),
+    ]
+
     beneficiaire = models.ForeignKey(Beneficiaire, related_name='experimentations', on_delete=models.CASCADE)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     coordinateur = models.CharField(max_length=100)
@@ -75,6 +105,32 @@ class Experimentation(models.Model):
     adresse_domicile = models.TextField(blank=True)
     methode_recrutement = models.CharField(max_length=20, choices=METHODE_RECRUTEMENT_CHOICES, blank=True)
     detail_recrutement = models.CharField(max_length=200, blank=True)
+    date_visite = models.DateField(null=True, blank=True)
+    heure_visite = models.TimeField(null=True, blank=True)
+    membre_ri2s = models.CharField(max_length=100, blank=True)  # For RI2S member selection
+    causes_interruption = models.TextField(blank=True)  # For 'interrompu' status
+    motif_desinstallation = models.TextField(blank=True)  # For 'desinstalle' status
+    teleassistance = models.BooleanField(default=False)  # Oui/Non for tele-assistance
+    teleassistance_detail = models.CharField(max_length=200, blank=True)  # Details if Oui
+    capteurs_disposition = models.JSONField(default=list, blank=True)  # List of capteurs (e.g., ["Borne d’appel", "Médaillon"])
+    capteurs_installer = models.JSONField(default=list, blank=True)  # List of capteurs to install
+    medecin_traitant = models.CharField(max_length=200, blank=True)
+    situation = models.CharField(max_length=20, choices=SITUATION_CHOICES, blank=True)
+    hebergement_personne = models.CharField(max_length=3, choices=HEBERGEMENT_PERSONNE_CHOICES, blank=True)
+    animal_compagnie = models.CharField(max_length=3, choices=ANIMAL_COMPAGNIE_CHOICES, blank=True)
+    animal_compagnie_detail = models.CharField(max_length=200, blank=True)
+    coucher_lever_autonome = models.CharField(max_length=3, choices=COUCHER_LEVER_AUTONOME_CHOICES, blank=True)
+    frequence_lever_nuit = models.CharField(max_length=100, blank=True)
+    type_logement = models.CharField(max_length=20, choices=TYPE_LOGEMENT_CHOICES, blank=True)
+    nombre_etages = models.PositiveIntegerField(null=True, blank=True)
+    nombre_pieces_vie = models.CharField(max_length=100, blank=True)
+    nombre_sorties_definitives = models.PositiveIntegerField(null=True, blank=True)
+    prises_proches = models.CharField(max_length=3, choices=[('oui', 'Oui'), ('non', 'Non')], blank=True)
+    application_otono_me = models.CharField(max_length=3, choices=[('oui', 'Oui'), ('non', 'Non')], blank=True)
+    gir = models.CharField(max_length=50, blank=True)
+    boite_clefs = models.CharField(max_length=3, choices=[('oui', 'Oui'), ('non', 'Non')], blank=True)
+    boite_clefs_detail = models.CharField(max_length=200, blank=True)
+    commentaire_visite = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.type} - {self.get_statut_display()}"
@@ -98,6 +154,26 @@ class Fichier(models.Model):
 
     def __str__(self):
         return f"{self.get_type_fichier_display()} - {self.experimentation}"
+
+
+class ProfessionnelSante(models.Model):
+    """
+    Modèle représentant un professionnel de santé lié à une expérimentation.
+    """
+    experimentation = models.ForeignKey(Experimentation, related_name='professionnels_sante', on_delete=models.CASCADE)
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    etablissement_structure = models.CharField(max_length=200)
+    profession = models.CharField(max_length=100)
+    telephone = models.CharField(
+        max_length=10,
+        validators=[RegexValidator(r'^\d{10}$', message="Le numéro doit contenir exactement 10 chiffres.")]
+    )
+    email = models.EmailField(blank=True)
+
+    def __str__(self):
+        return f"{self.prenom} {self.nom} ({self.profession})"
+    
     
 
 class ContactReferent(models.Model):

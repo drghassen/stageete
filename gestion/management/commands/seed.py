@@ -1,41 +1,43 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from faker import Faker
-from gestion.models import Beneficiaire, Aidant, Experimentation, Fichier, ExperimentationNew, Cohorte, CustomField, CustomFieldValue, CustomFieldOption
+from gestion.models import Beneficiaire, Aidant, Experimentation, ExperimentationFile, CapteurDisposition, CapteurInstallation, ProfessionnelSante
 import random
 from datetime import date, timedelta
-import os
 from django.core.files.base import ContentFile
 
 fake = Faker('fr_FR')
 
 class Command(BaseCommand):
-    help = 'Remplit la base avec des données factices pour tous les modèles'
+    help = 'Remplit la base avec des données factices pour les modèles principaux'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--clear', action='store_true', help='Clear existing data before seeding')
 
     def handle(self, *args, **kwargs):
+        clear_data = kwargs.get('clear', False)
         self.stdout.write(self.style.SUCCESS('Starting database seeding...'))
 
-        # Optional: Clear existing data for clean seeding
-        CustomFieldValue.objects.all().delete()
-        CustomFieldOption.objects.all().delete()
-        CustomField.objects.all().delete()
-        Cohorte.objects.all().delete()
-        ExperimentationNew.objects.all().delete()
-        Fichier.objects.all().delete()
-        Experimentation.objects.all().delete()
-        Aidant.objects.all().delete()
-        Beneficiaire.objects.all().delete()
+        if clear_data:
+            self.stdout.write('Clearing existing data...')
+            ExperimentationFile.objects.all().delete()
+            CapteurDisposition.objects.all().delete()
+            CapteurInstallation.objects.all().delete()
+            ProfessionnelSante.objects.all().delete()
+            Experimentation.objects.all().delete()
+            Aidant.objects.all().delete()
+            Beneficiaire.objects.all().delete()
 
-        # Part 1: Seed Beneficiaire, Aidant, Experimentation, and Fichier
+        # Seed Beneficiaire, Aidant, Experimentation, ExperimentationFile, Capteurs, ProfessionnelSante
         for _ in range(10):  # Create 10 beneficiaries
             beneficiaire = Beneficiaire.objects.create(
                 nom=fake.last_name(),
                 prenom=fake.first_name(),
-                date_naissance=fake.date_of_birth(minimum_age=18, maximum_age=90),
+                date_naissance=fake.date_of_birth(minimum_age=60, maximum_age=90),
                 sexe=random.choice(['M', 'F']),
                 code_postal=fake.postcode(),
                 email=fake.email(),
-                telephone=fake.msisdn()[:10]  # Ensure exactly 10 digits
+                telephone=fake.msisdn()[:10]
             )
             self.stdout.write(f'Créé bénéficiaire : {beneficiaire}')
 
@@ -47,21 +49,23 @@ class Command(BaseCommand):
                     prenom=fake.first_name(),
                     email=fake.email(),
                     telephone=fake.msisdn()[:10],
-                    lien_parente=random.choice(['Parent', 'Frère', 'Sœur', 'Conjoint'])
+                    lien_parente=random.choice(['Parent', 'Frère', 'Sœur', 'Conjoint', 'Enfant'])
                 )
                 self.stdout.write(f'  Créé aidant : {aidant}')
 
             # Create 1 to 2 experimentations
             for _ in range(random.randint(1, 2)):
                 type_exp = random.choice(['TelegrafiK', 'Presage'])
-                statut = random.choice([choice[0] for choice in Experimentation.STATUT_CHOICES])
+                statut_choices = [choice[0] for choice in Experimentation.STATUT_CHOICES]
+                statut = random.choice(statut_choices)
                 date_debut = fake.date_between(start_date='-2y', end_date='today')
-                date_fin = date_debut + timedelta(days=random.randint(30, 365))
+                date_fin = date_debut + timedelta(days=random.randint(30, 365)) if random.choice([True, False]) else None
+                
                 experimentation = Experimentation.objects.create(
                     beneficiaire=beneficiaire,
                     type=type_exp,
                     coordinateur=fake.name(),
-                    cohorte=fake.word(),
+                    cohorte=fake.word().capitalize(),
                     statut=statut,
                     date_debut=date_debut,
                     date_fin=date_fin,
@@ -69,112 +73,57 @@ class Command(BaseCommand):
                     methode_recrutement=random.choice([choice[0] for choice in Experimentation.METHODE_RECRUTEMENT_CHOICES]),
                     detail_recrutement=fake.sentence(nb_words=6)
                 )
-                self.stdout.write(f'  Créé expérimentation de type {type_exp}')
+                self.stdout.write(f'  Créé expérimentation de type {type_exp} avec statut {statut}')
 
-                # Create 1 to 2 files per experimentation
-                for _ in range(random.randint(1, 2)):
-                    file_name = f"{fake.file_name(extension='pdf')}"
-                    # Create a dummy PDF file content
-                    file_content = b'%PDF-1.4\n%% Dummy PDF for testing\n'
-                    fichier = Fichier.objects.create(
-                        experimentation=experimentation,
-                        type_fichier=random.choice([choice[0] for choice in Fichier.TYPE_CHOICES]),
-                        fichier=ContentFile(file_content, name=file_name)
-                    )
-                    self.stdout.write(f'    Créé fichier : {file_name}')
+                # Create files only if file_types is not empty
+                file_types = []
+                if type_exp == 'TelegrafiK' and statut in ['consentementTGK', 'installation', 'actif', 'interrompu', 'fini', 'desinstalle']:
+                    file_types = ['formulaire_ri2s', 'consentement_telegrafik', 'bon_installation']
+                elif type_exp == 'Presage' and statut in ['consentement', 'actif', 'fini', 'interrompu']:
+                    file_types = ['consentement_ri2s']
 
-        # Part 2: Seed ExperimentationNew, Cohorte, CustomField, CustomFieldValue, CustomFieldOption
-        # Create ExperimentationNew
-        exp1 = ExperimentationNew.objects.create(
-            nom="Smart Home Experiment",
-            entreprise="Tech Innovations",
-            date_debut=date(2025, 6, 1),
-            date_fin=date(2025, 12, 31),
-            remarques="Testing smart home technologies for seniors.",
-            contact_nom="Alice Smith",
-            contact_email="alice.smith@techinnovations.com",
-            contact_telephone="0123456789",
-            created_at=timezone.now()
-        )
+                if file_types:
+                    for file_type in random.sample(file_types, k=random.randint(1, len(file_types))):
+                        file_name = f"{fake.file_name(extension='pdf')}"
+                        file_content = b'%PDF-1.4\n%% Dummy PDF for testing\n'
+                        ExperimentationFile.objects.create(
+                            experimentation=experimentation,
+                            file_type=file_type,
+                            file=ContentFile(file_content, name=file_name)
+                        )
+                        self.stdout.write(f'    Créé fichier : {file_name} ({file_type})')
 
-        exp2 = ExperimentationNew.objects.create(
-            nom="Health Monitoring Trial",
-            entreprise="HealthTech Solutions",
-            date_debut=date(2025, 7, 1),
-            date_fin=date(2026, 3, 31),
-            remarques="Pilot study for wearable health monitors.",
-            contact_nom="Bob Johnson",
-            contact_email="bob.johnson@healthtech.com",
-            contact_telephone="0987654321",
-            created_at=timezone.now()
-        )
+                # Create capteurs for TelegrafiK
+                if type_exp == 'TelegrafiK':
+                    capteur_types = [choice[0] for choice in CapteurDisposition.CAPTEUR_TYPE_CHOICES]
+                    for capteur_type in random.sample(capteur_types, k=random.randint(1, len(capteur_types))):
+                        CapteurDisposition.objects.create(
+                            experimentation=experimentation,
+                            type=capteur_type,
+                            is_installed=False
+                        )
+                        self.stdout.write(f'    Créé capteur disposition : {capteur_type}')
 
-        # Create Cohorts
-        Cohorte.objects.create(
-            experimentation=exp1,
-            nom="Cohort A",
-            date_debut=date(2025, 6, 1),
-            date_fin=date(2025, 9, 30)
-        )
-        Cohorte.objects.create(
-            experimentation=exp1,
-            nom="Cohort B",
-            date_debut=date(2025, 10, 1),
-            date_fin=date(2025, 12, 31)
-        )
-        Cohorte.objects.create(
-            experimentation=exp2,
-            nom="Cohort X",
-            date_debut=date(2025, 7, 1),
-            date_fin=date(2026, 3, 31)
-        )
+                    for capteur_type in random.sample(capteur_types, k=random.randint(1, len(capteur_types))):
+                        CapteurInstallation.objects.create(
+                            experimentation=experimentation,
+                            type=capteur_type,
+                            is_installed=True
+                        )
+                        self.stdout.write(f'    Créé capteur installation : {capteur_type}')
 
-        # Create Custom Fields and Values
-        # Custom Field 1: Text field for exp1
-        cf1 = CustomField.objects.create(
-            experimentation=exp1,
-            nom="Project Notes",
-            type="text"
-        )
-        CustomFieldValue.objects.create(
-            custom_field=cf1,
-            value_text="Initial setup completed."
-        )
-
-        # Custom Field 2: Select field for exp1
-        cf2 = CustomField.objects.create(
-            experimentation=exp1,
-            nom="Deployment Status",
-            type="select"
-        )
-        CustomFieldValue.objects.create(
-            custom_field=cf2,
-            value_text="In Progress"
-        )
-        CustomFieldOption.objects.create(custom_field=cf2, option="In Progress")
-        CustomFieldOption.objects.create(custom_field=cf2, option="Completed")
-        CustomFieldOption.objects.create(custom_field=cf2, option="Pending")
-
-        # Custom Field 3: Number field for exp2
-        cf3 = CustomField.objects.create(
-            experimentation=exp2,
-            nom="Device Count",
-            type="number"
-        )
-        CustomFieldValue.objects.create(
-            custom_field=cf3,
-            value_number=50
-        )
-
-        # Custom Field 4: Date field for exp2
-        cf4 = CustomField.objects.create(
-            experimentation=exp2,
-            nom="Last Maintenance",
-            type="date"
-        )
-        CustomFieldValue.objects.create(
-            custom_field=cf4,
-            value_date=date(2025, 6, 10)
-        )
+                # Create professionnels de santé for TelegrafiK
+                if type_exp == 'TelegrafiK':
+                    for _ in range(random.randint(1, 3)):
+                        ProfessionnelSante.objects.create(
+                            experimentation=experimentation,
+                            nom=fake.last_name(),
+                            prenom=fake.first_name(),
+                            etablissement=fake.company(),
+                            profession=random.choice(['Médecin', 'Infirmier', 'Aide-soignant']),
+                            telephone=fake.msisdn()[:10],
+                            email=fake.email()
+                        )
+                        self.stdout.write(f'    Créé professionnel de santé')
 
         self.stdout.write(self.style.SUCCESS('Database seeded successfully!'))

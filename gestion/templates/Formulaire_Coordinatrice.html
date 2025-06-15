@@ -156,13 +156,13 @@
 
     // Blocs HTML réutilisables
     const adresseDomicileHTML = `
-      <div class="col-span-2"><label class="label-required">Adresse domicile</label><input class="input" type="text" required></div>
+      <div class="col-span-2"><label class="label-required">Adresse domicile</label><input class="input" type="text" name="adresse_domicile[]" required></div>
     `;
 
     const membreRI2SHTML = `
       <div class="col-span-2">
         <label class="label-required">Membre RI2S</label>
-        <select class="input" required>
+        <select class="input" name="membre_ri2s[]" required>
           <option value="">Choisir un membre...</option>
           <option>RI2S - Rahma</option>
           <option>RI2S - Manon</option>
@@ -186,8 +186,8 @@
     } else if (statut === "visite") {
       detailDiv.innerHTML += `
         <div class='grid grid-cols-2 gap-4'>
-          <div><label class="label-required">Date</label><input class='input' type='date' required></div>
-          <div><label class="label-required">Heure</label><input class='input' type='time' required></div>
+          <div><label class="label-required">Date</label><input class='input' type='date' name='date_visite[]' required></div>
+          <div><label class="label-required">Heure</label><input class='input' type='time' name='heure_visite[]' required></div>
           ${membreRI2SHTML}
           ${adresseDomicileHTML}
         </div>
@@ -321,35 +321,34 @@
         </button>
 
         <!-- Médecin traitant affiché par défaut -->
-        <div class="reseau-sante-wrapper space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-100 border p-4 rounded-lg relative">
-            <div>
-              <label class="label-required">Nom</label>
-              <input type="text" class="input" required oninput="verifierChampTexte(this)">
-            </div>
-            <div>
-              <label class="label-required">Prénom</label>
-              <input type="text" class="input" required oninput="verifierChampTexte(this)">
-            </div>
-            <div>
-              <label class="label-required">Établissement / Structure</label>
-              <input type="text" class="input" required oninput="verifierChampTexte(this)">
-            </div>
-            <div>
-              <label class="label-required">Profession</label>
-              <input type="text" class="input" value="Médecin traitant" required oninput="verifierChampTexte(this)">
-            </div>
-            <div>
-              <label class="label-required">Téléphone</label>
-              <input type="tel" class="input" name="tiers_tel[]"  required oninput="verifierTel(this)">
-            </div>
-            <div>
-              <label>Email</label>
-              <input type="email" class="input" oninput="verifierEmail(this)">
-            </div>
-          </div>
+       <div class="reseau-sante-wrapper space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-100 border p-4 rounded-lg relative">
+        <div>
+          <label class="label-required">Nom</label>
+          <input type="text" class="input" name="pro_sante_nom_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
+        </div>
+        <div>
+          <label class="label-required">Prénom</label>
+          <input type="text" class="input" name="pro_sante_prenom_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
+        </div>
+        <div>
+          <label class="label-required">Établissement / Structure</label>
+          <input type="text" class="input" name="pro_sante_etablissement_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
+        </div>
+        <div>
+          <label class="label-required">Profession</label>
+          <input type="text" class="input" name="pro_sante_profession_${experimentIndex}[]" value="Médecin traitant" required oninput="verifierChampTexte(this)">
+        </div>
+        <div>
+          <label class="label-required">Téléphone</label>
+          <input type="tel" class="input" name="pro_sante_telephone_${experimentIndex}[]" required oninput="verifierTel(this)">
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" class="input" name="pro_sante_email_${experimentIndex}[]" oninput="verifierEmail(this)">
         </div>
       </div>
+    </div>
       `;
     }
 
@@ -645,36 +644,38 @@ function getMessageElement(input) {
 
 function ajouterProfessionnelSante(button) {
   const wrapper = button.closest('.md\\:col-span-2').querySelector('.reseau-sante-wrapper');
+  // Find the experimentation index by traversing up to the experiment-container
+  const experimentContainer = button.closest('.experiment-container');
+  const experimentIndex = Array.from(document.querySelectorAll('.experiment-container')).indexOf(experimentContainer);
+  
   const container = document.createElement('div');
   container.className = "grid grid-cols-1 md:grid-cols-2 gap-4 bg-white border p-4 rounded-lg relative";
 
   container.innerHTML = `
     <div>
       <label class="label-required">Nom</label>
-      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+      <input type="text" class="input" name="pro_sante_nom_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
     </div>
     <div>
       <label class="label-required">Prénom</label>
-      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+      <input type="text" class="input" name="pro_sante_prenom_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
     </div>
     <div>
       <label class="label-required">Établissement / Structure</label>
-      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+      <input type="text" class="input" name="pro_sante_etablissement_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
     </div>
     <div>
       <label class="label-required">Profession</label>
-      <input type="text" class="input" required oninput="verifierChampTexte(this)">
+      <input type="text" class="input" name="pro_sante_profession_${experimentIndex}[]" required oninput="verifierChampTexte(this)">
     </div>
     <div>
       <label class="label-required">Téléphone</label>
-      <input type="tel" class="input" name="tiers_tel[]"  required oninput="verifierTel(this)">
+      <input type="tel" class="input" name="pro_sante_telephone_${experimentIndex}[]" required oninput="verifierTel(this)">
     </div>
     <div>
       <label>Email</label>
-      <input type="email" class="input" oninput="verifierEmail(this)">
+      <input type="email" class="input" name="pro_sante_email_${experimentIndex}[]" oninput="verifierEmail(this)">
     </div>
-
-    <!-- Messages d’erreur sous chaque champ -->
     <div class="md:col-span-2 flex justify-end mt-2">
       <button type="button" onclick="this.closest('div.grid').remove()" title="Supprimer ce professionnel"
         class="text-red-600 hover:text-red-800 flex items-center">
@@ -691,44 +692,40 @@ function ajouterProfessionnelSante(button) {
 }
 
 document.getElementById('beneficiaireForm').addEventListener('submit', function(e) {
-  e.preventDefault();
+ e.preventDefault();
   const formData = new FormData(this);
-  // Log the form data to the console
-  console.log("Form Data being sent:");
-  for (let [key, value] of formData.entries()) {
-    console.log(`${key}: ${value}`);
-  }
+  const statuts = formData.getAll('exp_statut[]');
+  const datesVisite = formData.getAll('date_visite[]');
+  const heuresVisite = formData.getAll('heure_visite[]');
+  const membresRi2s = formData.getAll('membre_ri2s[]');
 
-  // Validate all inputs
-  const allInputs = document.querySelectorAll("input, select, textarea");
-  let hasError = false;
-  for (let input of allInputs) {
-    if (input.type === "email" && input.value.trim() !== "") {
-      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!regex.test(input.value.trim())) {
-        input.scrollIntoView({ behavior: "smooth", block: "center" });
-        input.focus();
-        input.classList.add("ring", "ring-red-500", "ring-offset-2", "transition");
-        alert(`⚠️ L'adresse e-mail est invalide : ${input.value}`);
-        hasError = true;
+  for (let i = 0; i < statuts.length; i++) {
+    if (['visite', 'installation', 'interrompu', 'fini'].includes(statuts[i])) {
+      if (!datesVisite[i]) {
+        alert(`⚠️ Date de visite requise pour le statut ${statuts[i]} (expérimentation ${i + 1})`);
+        return;
+      }
+      if (!heuresVisite[i]) {
+        alert(`⚠️ Heure de visite requise pour le statut ${statuts[i]} (expérimentation ${i + 1})`);
+        return;
+      }
+      if (!membresRi2s[i] || membresRi2s[i] === '') {
+        alert(`⚠️ Membre RI2S requis pour le statut ${statuts[i]} (expérimentation ${i + 1})`);
+        return;
+      }
+      // Validate date format (optional, as type="date" ensures YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(datesDebut[i])) {
+        alert(`⚠️ Format de date de début invalide pour l'expérimentation ${i + 1}`);
+        return;
+      }
+      if (!dateRegex.test(datesFin[i])) {
+        alert(`⚠️ Format de date de fin invalide pour l'expérimentation ${i + 1}`);
         return;
       }
     }
-    if (input.name.includes("tiers_tel") && input.value.trim() !== "") {
-      if (!/^\d+$/.test(input.value.trim()) || input.value.trim().length !== 10) {
-        input.scrollIntoView({ behavior: "smooth", block: "center" });
-        input.focus();
-        input.classList.add("ring", "ring-red-500", "ring-offset-2", "transition");
-        alert(`⚠️ Numéro de téléphone invalide : ${input.value}`);
-        hasError = true;
-        return;
-      }
-    }
   }
 
-  if (hasError) return;
-
-  // Submit form data
   fetch('/save-beneficiaire/', {
     method: 'POST',
     body: formData
@@ -739,27 +736,21 @@ document.getElementById('beneficiaireForm').addEventListener('submit', function(
   })
   .then(data => {
     if (!data.success) throw new Error(data.error || 'Submission failed');
-
-    // Handle car reservations for experiments
+    // Handle car reservations
     const experiments = document.querySelectorAll('.experiment-container');
-    let allReservationsHandled = true;
-
-    experiments.forEach(exp => {
+    experiments.forEach((exp, index) => {
       const statutSelect = exp.querySelector('.statut-select');
       const statut = statutSelect ? statutSelect.value : "";
       const statutsAvecReservation = ["visite", "installation", "interrompu", "fini"];
-
       if (statutsAvecReservation.includes(statut)) {
         const hasDate = exp.querySelector('input[type="date"]');
         const hasTime = exp.querySelector('input[type="time"]');
-
         if (hasDate && hasTime) {
           let message = "Souhaitez-vous réserver une voiture pour cet événement ?";
           if (statut === "visite") message = "Souhaitez-vous réserver une voiture pour la visite ?";
           else if (statut === "installation") message = "Souhaitez-vous réserver une voiture pour l’installation ?";
           else if (statut === "interrompu") message = "Souhaitez-vous réserver une voiture pour la désinstallation ?";
           else if (statut === "fini") message = "Souhaitez-vous réserver une voiture pour la désinstallation ?";
-
           const choix = confirm(message);
           if (choix) {
             alert("🚗 Réservation de voiture enregistrée !");
@@ -769,8 +760,6 @@ document.getElementById('beneficiaireForm').addEventListener('submit', function(
         }
       }
     });
-
-    // If all submissions and reservations are handled successfully, show final alert
     alert("✅ Toutes les données ont été enregistrées avec succès !");
   })
   .catch(error => {
